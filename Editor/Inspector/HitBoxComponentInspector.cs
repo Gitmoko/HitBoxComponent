@@ -7,8 +7,8 @@ public class HitBoxComponentInspector : Editor
 {
 
     private HitBoxComponent targetComponents;
-    private int traseAnimMode = 0;
-    private int traseAnimModeStateNameCandidate = 0;
+    private int traceAnimMode = 0;
+    private int traceAnimModeStateNameCandidate = 0;
 
     private static GUIStyle hitboxBackgroundStyle;
 
@@ -61,7 +61,7 @@ public class HitBoxComponentInspector : Editor
         int animationindex = 0;
         int keyframeIndex = 0;
 
-        if (traseAnimMode == 2)
+        if (traceAnimMode == 2)
         {
             animationindex = targetComponents.GetStateNames().FindIndex(e => e == targetComponents.GetNowStateName());
             keyframeIndex = targetComponents.GetNowKeyFrame();
@@ -119,8 +119,8 @@ public class HitBoxComponentInspector : Editor
 
         var animlist = targetComponents.GetStateNames();
 
-        traseAnimMode = EditorGUILayout.Popup("trase Animation Mode", traseAnimMode, new string[] { "Off", "AnimationWindow", "Scene(PlayOnly)" });
-        if (traseAnimMode == 1)
+        traceAnimMode = EditorGUILayout.Popup("trace Animation Mode", traceAnimMode, new string[] { "Off", "AnimationWindow", "Scene(PlayOnly)" });
+        if (traceAnimMode == 1)
         {
             var currentFrame = AnimationHelper.GetCurrentFrame();
             targetComponents.inspectorTemp.keyframeIndex = currentFrame;
@@ -129,8 +129,8 @@ public class HitBoxComponentInspector : Editor
             var clipname = AnimationHelper.GetCurrentClipName();
             var statenameCandidate = targetComponents.simpleAnimation.GetEditorStates().Where((e) => e.clip.name == clipname).Select(e => e.name);
 
-            traseAnimModeStateNameCandidate = EditorGUILayout.Popup("AnimStateName", traseAnimModeStateNameCandidate, statenameCandidate.ToArray());
-            var statename = statenameCandidate.ToList()[traseAnimModeStateNameCandidate];
+            traceAnimModeStateNameCandidate = EditorGUILayout.Popup("AnimStateName", traceAnimModeStateNameCandidate, statenameCandidate.ToArray());
+            var statename = statenameCandidate.ToList()[traceAnimModeStateNameCandidate];
             EditorGUILayout.LabelField("Clipname", targetComponents.GetClipName(statename));
 
             targetComponents.inspectorTemp.animationindex = animlist.FindIndex(e => e == statename);
@@ -141,7 +141,7 @@ public class HitBoxComponentInspector : Editor
             }
 ;
         }
-        else if (traseAnimMode == 2)
+        else if (traceAnimMode == 2)
         {
             if (!Application.isPlaying)
             {
@@ -150,6 +150,7 @@ public class HitBoxComponentInspector : Editor
             var currentFrame = targetComponents.GetNowKeyFrame();
             targetComponents.inspectorTemp.keyframeIndex = currentFrame;
             var nowstate = targetComponents.GetNowState();
+            EditorGUILayout.LabelField("NowStateName", nowstate.name);
             targetComponents.inspectorTemp.animationindex = targetComponents.GetStateNames().FindIndex(e => e == nowstate.name);
             EditorGUILayout.LabelField("Clipname", nowstate.clip.name);
 
@@ -161,7 +162,7 @@ public class HitBoxComponentInspector : Editor
             EditorGUILayout.LabelField("ClipName", targetComponents.GetClipName(statename));
         }
 
-        if (Application.isPlaying && traseAnimMode == 0)
+        if (Application.isPlaying && traceAnimMode == 0)
         {
 
             if (GUILayout.Button("Show Now KeyFrame Data"))
@@ -316,7 +317,7 @@ public class HitBoxComponentInspector : Editor
 
         if (targetComponents.gizmoController != null)
         {
-            if (traseAnimMode == 0)
+            if (traceAnimMode == 0)
             {
                 targetComponents.gizmoController.drawGizmoData.Add(targetComponents.hitboxes[animname].keyframes[keyframeIndex]);
             }
