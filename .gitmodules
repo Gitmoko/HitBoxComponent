@@ -1,0 +1,3 @@
+[submodule "MySimpleAnimation"]
+	path = SimpleAnimation
+	url = git@github.com:Gitmoko/SimpleAnimation.git
