@@ -4,6 +4,21 @@ using System.Linq;
 using UnityEngine;
 
 
+[Serializable]
+public class KVPair<TKey, TValue>
+{
+    public KVPair(TKey key, TValue value)
+    {
+        Key = key;
+        Value = value;
+    }
+
+
+    public TKey Key;
+
+    public TValue Value;
+}
+
 public enum ColliderShape
 {
     Rect,
@@ -14,6 +29,8 @@ public enum ColliderShape
     None,
 }
 
+
+
 [Serializable]
 public class KeyFrameCollider
 {
@@ -22,6 +39,7 @@ public class KeyFrameCollider
     public string layer = "Default";
     public int dulation = 1;
     public int startframe = 0;
+    public string data;
 
 }
 
@@ -40,22 +58,6 @@ public class HitBoxKeyFrames
     public List<KeyFrameData> keyframes = new List<KeyFrameData>();
 }
 
-
-[Serializable]
-public class KVPair<TKey, TValue>
-{
-    public KVPair(TKey key, TValue value)
-    {
-        Key = key;
-        Value = value;
-    }
-
-
-    public TKey Key;
-
-    public TValue Value;
-
-}
 
 [Serializable]
 public class HitBoxesKeyVal : KVPair<string, HitBoxKeyFrames>, IComparable<HitBoxesKeyVal>
@@ -221,6 +223,8 @@ public class HitBoxComponent : MonoBehaviour
         var ret = new GameObject("test");
         var objtrans = ret.GetComponent<Transform>();
         var rigidbody = ret.AddComponent<Rigidbody>();
+        var colliderinfo = ret.AddComponent<ColliderInfo>();
+        colliderinfo.keyframecollider = keyframe;
         rigidbody.useGravity = false;
 
         var param = keyframe.colliderParam;
@@ -330,15 +334,18 @@ public class HitBoxComponent : MonoBehaviour
     //実行中の現在ステートの取得
     public int GetNowKeyFrame()
     {
-        simpleAnimation = GetComponent<SimpleAnimation>();
-        var nowstates = simpleAnimation.GetStates().First(s => s.enabled);
-        var normalizedTime = nowstates.normalizedTime;
+        var nowstate = simpleAnimation.GetStates().First(s => s.enabled);
+        var normalizedTime = nowstate.normalizedTime;
         float elapsedTime = normalizedTime - (float)Math.Truncate(normalizedTime);
-        if (nowstates.normalizedTime >= 1)
+        int ret = 0;
+        if (normalizedTime == 1 && !(nowstate.wrapMode == WrapMode.Loop))
         {
-            elapsedTime = 0.999f;
+            ret = Convert.ToInt32(nowstate.clip.length * nowstate.clip.frameRate) - 1;
         }
-        var ret = Convert.ToInt32(Math.Floor(nowstates.clip.frameRate * nowstates.speed * nowstates.clip.length * elapsedTime));
+        else
+        {
+            ret = Convert.ToInt32(Math.Floor(nowstate.clip.frameRate * nowstate.clip.length * elapsedTime));
+        }
         return ret;
     }
 

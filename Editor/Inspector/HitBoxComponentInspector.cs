@@ -72,8 +72,17 @@ public class HitBoxComponentInspector : Editor
             keyframeIndex = targetComponents.inspectorTemp.keyframeIndex;
         }
 
-        var animname = targetComponents.GetStateNames()[targetComponents.inspectorTemp.animationindex];
+        var animname = targetComponents.GetStateNames()[animationindex];
 
+        try
+        {
+            var a = targetComponents.hitboxes[animname].keyframes[keyframeIndex].colliders;
+        }
+        catch
+        {
+            animationindex = targetComponents.GetStateNames().FindIndex(e => e == targetComponents.GetNowStateName());
+            keyframeIndex = targetComponents.GetNowKeyFrame();
+        }
         foreach (var col in targetComponents.hitboxes[animname].keyframes[keyframeIndex].colliders)
         {
 
@@ -103,6 +112,20 @@ public class HitBoxComponentInspector : Editor
                                                      Handles.DotHandleCap);
 
                 rect.rect.size = (movedhelper - (col.colliderParam.Position + targetComponents.gameObject.transform.position));
+
+            }
+            else if (col.colliderParam is SphereColliderParam)
+            {
+                var sphere = col.colliderParam as SphereColliderParam;
+                var helper = new Vector3(sphere.radius, 0.0f, 0.0f);
+                Handles.color = new Color(1, 1, 1);
+                var movedhelper = Handles.FreeMoveHandle(helper + col.colliderParam.Position + targetComponents.gameObject.transform.position,
+                                                     Quaternion.identity,
+                                                     0.05f,
+                                                     Vector3.one,
+                                                     Handles.DotHandleCap);
+
+                sphere.radius = Mathf.Abs((movedhelper - (col.colliderParam.Position + targetComponents.gameObject.transform.position)).x);
 
             }
 
@@ -196,6 +219,7 @@ public class HitBoxComponentInspector : Editor
             colliderdata.tag = EditorGUILayout.TextField("tag", colliderdata.tag);
             colliderdata.layer = EditorGUILayout.TextField("layer", colliderdata.layer);
             colliderdata.dulation = EditorGUILayout.IntField("dulation", colliderdata.dulation);
+            colliderdata.data = EditorGUILayout.TextField("data", colliderdata.data);
 
             //collider shape
             if (colliderdata.colliderParam == null)
@@ -206,7 +230,7 @@ public class HitBoxComponentInspector : Editor
             var selectedshape = (ColliderShape)EditorGUILayout.EnumPopup(colliderdata.colliderParam.GetShape());
             var newcolliderparam = ColliderParam.ColliderParamFactory(selectedshape);
 
-            if (newcolliderparam != null)
+            if (newcolliderparam != null && colliderdata.colliderParam.GetShape() != selectedshape)
             {
 
                 var path = AssetDatabase.GetAssetPath(targetComponents.hitboxes);

@@ -35,7 +35,7 @@ public class ColliderParam : ScriptableObject
         {
             Debug.LogError("not implemented");
         }
-        return null;
+        return ret;
 
     }
 }
