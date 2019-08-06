@@ -93,6 +93,13 @@ public class HitBoxComponentInspectorTemporaryValue
     public int keyframeIndex;
 }
 
+public enum DirectionType
+{
+    Forward,
+    Backward
+
+}
+
 [Serializable]
 [ExecuteInEditMode]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -110,6 +117,10 @@ public class HitBoxComponent : MonoBehaviour
 
     public SimpleAnimation simpleAnimation;
 
+    [HideInInspector]
+    public DirectionType direction = DirectionType.Forward;
+
+
     private List<KVPair<GameObject, KeyFrameCollider>> nowColliders = new List<KVPair<GameObject, KeyFrameCollider>>();
 
     private int preveousKeyFrameIndex = -1;
@@ -120,6 +131,7 @@ public class HitBoxComponent : MonoBehaviour
     private void OnEnable()
     {
         simpleAnimation = GetComponent<SimpleAnimation>();
+        SyncKeyFramesWithSimpleAnimator();
     }
 
 
@@ -154,7 +166,6 @@ public class HitBoxComponent : MonoBehaviour
 
             if (preveousKeyFrameIndex != newKeyframesIndex)
             {
-                preveousKeyFrameIndex = newKeyframesIndex;
 
                 var destroylist = new List<GameObject>();
                 ///生存期間のすぎたcolliderのリスト化
@@ -163,7 +174,7 @@ public class HitBoxComponent : MonoBehaviour
                 nowColliders.RemoveAll((KVPair<GameObject, KeyFrameCollider> e) =>
                 {
                     var elapsed = newKeyframesIndex - e.Value.startframe;
-                    if (elapsed >= e.Value.dulation)
+                    if (elapsed >= e.Value.dulation && e.Key.activeSelf)
                     {
 
                         destroylist.Add(e.Key);
@@ -181,13 +192,19 @@ public class HitBoxComponent : MonoBehaviour
                 }
 
 
-                //新たに発生したcolliderの追加
-                foreach (var e in hitboxes[nowstates.name].keyframes[newKeyframesIndex].colliders)
+                for (int i = preveousKeyFrameIndex + 1; i <= newKeyframesIndex; i++)
                 {
-                    var col = AddColliderComponentFromParam(e);
-                    nowColliders.Add(new KVPair<GameObject, KeyFrameCollider>(col, e));
+                    //新たに発生したcolliderの追加
+                    foreach (var e in hitboxes[nowstates.name].keyframes[i].colliders)
+                    {
+                        Debug.Log("create col");
+                        var col = AddColliderComponentFromParam(e);
+                        nowColliders.Add(new KVPair<GameObject, KeyFrameCollider>(col, e));
+
+                    }
 
                 }
+                preveousKeyFrameIndex = newKeyframesIndex;
                 /*
                 if (KeyframesIndex == 0)
                 {
@@ -229,12 +246,14 @@ public class HitBoxComponent : MonoBehaviour
 
         var param = keyframe.colliderParam;
 
+        float sign = (direction == DirectionType.Forward) ? 1 : -1;
+
 
         if (param is RectColliderParam)
         {
             var rect = param as RectColliderParam;
             var col = ret.AddComponent<BoxCollider>();
-            col.center = rect.rect.center;
+            col.center = new Vector3(rect.rect.center.x * sign, rect.rect.center.y, 0.0f);
             col.size = new Vector3(rect.rect.size.x, rect.rect.size.y, 0.2f);
             col.tag = keyframe.tag;
             col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
@@ -244,7 +263,7 @@ public class HitBoxComponent : MonoBehaviour
         {
             var sphere = param as SphereColliderParam;
             var col = ret.AddComponent<SphereCollider>();
-            col.center = sphere.position;
+            col.center = new Vector3(sphere.position.x, sphere.position.y, 0.0f);
             col.radius = sphere.radius;
             col.tag = keyframe.tag;
             col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
@@ -267,10 +286,12 @@ public class HitBoxComponent : MonoBehaviour
 
     public void SyncKeyFramesWithSimpleAnimator()
     {
+
         if (hitboxes == null)
         {
             return;
         }
+
         foreach (var state in simpleAnimation.GetEditorStates())
         {
             //ToInt32は四捨五入するので、多少の誤差があっても正確にフレーム数を取得できる
@@ -279,7 +300,7 @@ public class HitBoxComponent : MonoBehaviour
             //keyframesの数が変化しない場合
             if (hitboxes[state.name].keyframes.Count == numframe)
             {
-                return;
+                continue;
             }
             //keyframesが縮小する場合
             else if (hitboxes[state.name].keyframes.Count > numframe)
@@ -338,7 +359,7 @@ public class HitBoxComponent : MonoBehaviour
         var normalizedTime = nowstate.normalizedTime;
         float elapsedTime = normalizedTime - (float)Math.Truncate(normalizedTime);
         int ret = 0;
-        if (normalizedTime == 1 && !(nowstate.wrapMode == WrapMode.Loop))
+        if (normalizedTime >= 1 && !(nowstate.wrapMode == WrapMode.Loop))
         {
             ret = Convert.ToInt32(nowstate.clip.length * nowstate.clip.frameRate) - 1;
         }
@@ -349,5 +370,21 @@ public class HitBoxComponent : MonoBehaviour
         return ret;
     }
 
+    public float GetDirectionSign()
+    {
+        float ret = (direction == DirectionType.Forward) ? 1.0f : -1.0f;
+        return ret;
+    }
 
+    public void SetDirectionReverse()
+    {
+        if (direction == DirectionType.Forward)
+        {
+            direction = DirectionType.Backward;
+        }
+        else
+        {
+            direction = DirectionType.Forward;
+        }
+    }
 }

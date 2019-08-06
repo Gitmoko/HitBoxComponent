@@ -57,26 +57,37 @@ public class HitBoxComponentGizmo
         var transform = target.gameObject.transform;
         foreach (var keyframe in target.gizmoController.drawGizmoData)
         {
+            var sign = target.GetDirectionSign();
             foreach (var e in keyframe.colliders)
             {
                 if (e.colliderParam is RectColliderParam)
                 {
                     var rect = e.colliderParam as RectColliderParam;
-                    var position = new Vector3(rect.rect.position.x + transform.position.x, rect.rect.position.y + transform.position.y, transform.position.z);
+                    var rectcenter = rect.rect.center;
+                    rectcenter.Scale(new Vector3(sign, 1.0f, 1.0f));
+                    var directedrect = rect.rect;
+                    directedrect.center = rectcenter;
+                    var position = new Vector3(directedrect.position.x + transform.position.x, directedrect.position.y + transform.position.y, transform.position.z);
                     DrawRectGizmo(position, rect.rect.size, color);
                 }
                 else if (e.colliderParam is SphereColliderParam)
                 {
                     var sphere = e.colliderParam as SphereColliderParam;
-                    var position = new Vector3(sphere.position.x + transform.position.x, sphere.position.y + transform.position.y, transform.position.z);
+                    var preposition = sphere.position;
+                    preposition.Scale(new Vector3(sign, 1.0f, 1.0f));
+                    var position = new Vector3(preposition.x + transform.position.x, preposition.y + transform.position.y, transform.position.z);
 
                     DrawSphereGizmo(position, sphere.radius, color);
                 }
                 else if (e.colliderParam is CapsuleColliderParam)
                 {
                     var capsule = e.colliderParam as CapsuleColliderParam;
-                    var start = new Vector3(capsule.start.x + transform.position.x, capsule.start.y + transform.position.y, transform.position.z);
-                    var end = new Vector3(capsule.end.x + transform.position.x, capsule.end.y + transform.position.y, transform.position.z);
+                    var prestart = capsule.start;
+                    prestart.Scale(new Vector3(sign, 1.0f, 1.0f));
+                    var start = new Vector3(prestart.x + transform.position.x, prestart.y + transform.position.y, transform.position.z);
+                    var preend = capsule.end;
+                    preend.Scale(new Vector3(sign, 1.0f, 1.0f));
+                    var end = new Vector3(preend.x + transform.position.x, preend.y + transform.position.y, transform.position.z);
 
                     DrawCapsuleGizmo(start, end, capsule.radius, color);
                 }

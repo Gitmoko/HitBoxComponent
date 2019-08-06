@@ -2,21 +2,35 @@
 using UnityEditor;
 using UnityEngine;
 
+internal enum TraceAnimMode
+{
+    Off,
+    AnimationWindow,
+    Scene
+}
+
 [CustomEditor(typeof(HitBoxComponent))]
 public class HitBoxComponentInspector : Editor
 {
 
     private HitBoxComponent targetComponents;
-    private int traceAnimMode = 0;
+    private TraceAnimMode traceAnimMode = TraceAnimMode.Off;
     private int traceAnimModeStateNameCandidate = 0;
 
     private static GUIStyle hitboxBackgroundStyle;
 
+    public override bool RequiresConstantRepaint()
+    {
+        return true;
+    }
+
     #region Drawing Methods
     public override void OnInspectorGUI()
     {
-
-        targetComponents.gizmoController.drawGizmoData.Clear();
+        if (!Application.isPlaying)
+        {
+            targetComponents.SyncKeyFramesWithSimpleAnimator();
+        }
 
         serializedObject.Update();
 
@@ -26,13 +40,20 @@ public class HitBoxComponentInspector : Editor
 
         var proph = serializedObject.FindProperty("hitboxes");
         EditorGUILayout.PropertyField(proph, true);
+
         if (EditorGUI.EndChangeCheck())
         {
             serializedObject.ApplyModifiedProperties();
             targetComponents.SyncKeyFramesWithSimpleAnimator();
         }
 
+        if (targetComponents.hitboxes == null)
+        {
+            GUILayout.EndVertical();
+            return;
+        }
 
+        targetComponents.gizmoController.drawGizmoData.Clear();
 
         //var curframe = AnimationHelper.GetCurrentFrame();
 
@@ -58,10 +79,15 @@ public class HitBoxComponentInspector : Editor
 
     private void OnSceneGUI()
     {
+        if (targetComponents.hitboxes == null)
+        {
+            return;
+        }
+
         int animationindex = 0;
         int keyframeIndex = 0;
 
-        if (traceAnimMode == 2)
+        if (traceAnimMode == TraceAnimMode.Scene)
         {
             animationindex = targetComponents.GetStateNames().FindIndex(e => e == targetComponents.GetNowStateName());
             keyframeIndex = targetComponents.GetNowKeyFrame();
@@ -91,27 +117,37 @@ public class HitBoxComponentInspector : Editor
             var precolor = Handles.color;
             var so = new SerializedObject(col.colliderParam);
             Handles.color = new Color(0, 0, 0);
-            var movedPosition = Handles.FreeMoveHandle(col.colliderParam.Position + targetComponents.gameObject.transform.position,
+
+            var sign = targetComponents.GetDirectionSign();
+
+            var position = col.colliderParam.Position;
+            position.Scale(new Vector3(sign, 1, 1));
+            var movedPosition = Handles.FreeMoveHandle(position + targetComponents.gameObject.transform.position,
                                                      Quaternion.identity,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
 
-
-            col.colliderParam.Position = movedPosition - targetComponents.gameObject.transform.position;
+            var newposition = movedPosition - targetComponents.gameObject.transform.position;
+            newposition.Scale(new Vector3(sign, 1.0f, 1.0f));
+            col.colliderParam.Position = newposition;
 
             if (col.colliderParam is RectColliderParam)
             {
                 var rect = col.colliderParam as RectColliderParam;
-                var helper = new Vector3(rect.rect.size.x, rect.rect.size.y, 0.0f);
+                var helper = new Vector3(rect.rect.size.x * sign, rect.rect.size.y, 0.0f);
                 Handles.color = new Color(1, 1, 1);
-                var movedhelper = Handles.FreeMoveHandle(helper + col.colliderParam.Position + targetComponents.gameObject.transform.position,
+                var helperpreposition = position + helper;
+                helperpreposition.Scale(new Vector3(sign, 1.0f, 1.0f));
+                var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
                                                      Quaternion.identity,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
 
-                rect.rect.size = (movedhelper - (col.colliderParam.Position + targetComponents.gameObject.transform.position));
+                var newsize = movedhelper - (position + targetComponents.gameObject.transform.position);
+                newsize.Scale(new Vector3(sign, 1.0f, 1.0f));
+                rect.rect.size = newsize;
 
             }
             else if (col.colliderParam is SphereColliderParam)
@@ -119,13 +155,15 @@ public class HitBoxComponentInspector : Editor
                 var sphere = col.colliderParam as SphereColliderParam;
                 var helper = new Vector3(sphere.radius, 0.0f, 0.0f);
                 Handles.color = new Color(1, 1, 1);
-                var movedhelper = Handles.FreeMoveHandle(helper + col.colliderParam.Position + targetComponents.gameObject.transform.position,
+                var helperpreposition = position + helper;
+                helperpreposition.Scale(new Vector3(sign, 1.0f, 1.0f));
+                var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
                                                      Quaternion.identity,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
 
-                sphere.radius = Mathf.Abs((movedhelper - (col.colliderParam.Position + targetComponents.gameObject.transform.position)).x);
+                sphere.radius = Mathf.Abs((movedhelper - (position + targetComponents.gameObject.transform.position)).x);
 
             }
 
@@ -142,8 +180,8 @@ public class HitBoxComponentInspector : Editor
 
         var animlist = targetComponents.GetStateNames();
 
-        traceAnimMode = EditorGUILayout.Popup("trace Animation Mode", traceAnimMode, new string[] { "Off", "AnimationWindow", "Scene(PlayOnly)" });
-        if (traceAnimMode == 1)
+        traceAnimMode = (TraceAnimMode)EditorGUILayout.Popup("trace Animation Mode", (int)traceAnimMode, new string[] { "Off", "AnimationWindow", "Scene(PlayOnly)" });
+        if (traceAnimMode == TraceAnimMode.AnimationWindow)
         {
             var currentFrame = AnimationHelper.GetCurrentFrame();
             targetComponents.inspectorTemp.keyframeIndex = currentFrame;
@@ -164,7 +202,7 @@ public class HitBoxComponentInspector : Editor
             }
 ;
         }
-        else if (traceAnimMode == 2)
+        else if (traceAnimMode == TraceAnimMode.Scene)
         {
             if (!Application.isPlaying)
             {
@@ -174,7 +212,7 @@ public class HitBoxComponentInspector : Editor
             targetComponents.inspectorTemp.keyframeIndex = currentFrame;
             var nowstate = targetComponents.GetNowState();
             EditorGUILayout.LabelField("NowStateName", nowstate.name);
-            targetComponents.inspectorTemp.animationindex = targetComponents.GetStateNames().FindIndex(e => e == nowstate.name);
+            targetComponents.inspectorTemp.animationindex = animlist.FindIndex(e => e == nowstate.name);
             EditorGUILayout.LabelField("Clipname", nowstate.clip.name);
 
         }
@@ -185,6 +223,8 @@ public class HitBoxComponentInspector : Editor
             EditorGUILayout.LabelField("ClipName", targetComponents.GetClipName(statename));
         }
 
+        EditorGUILayout.LabelField("Flip", targetComponents.direction.ToString());
+
         if (Application.isPlaying && traceAnimMode == 0)
         {
 
@@ -192,7 +232,7 @@ public class HitBoxComponentInspector : Editor
             {
                 var nowanim = targetComponents.GetNowStateName();
                 var keyframe = targetComponents.GetNowKeyFrame();
-                targetComponents.inspectorTemp.animationindex = targetComponents.GetStateNames().ToList().FindIndex(0, e => e == nowanim);
+                targetComponents.inspectorTemp.animationindex = animlist.FindIndex(0, e => e == nowanim);
                 targetComponents.inspectorTemp.keyframeIndex = keyframe;
 
             }
@@ -201,6 +241,7 @@ public class HitBoxComponentInspector : Editor
         var animname = animlist[targetComponents.inspectorTemp.animationindex];
 
         var keyframenum = targetComponents.hitboxes[animname].keyframes.Count;
+
         targetComponents.inspectorTemp.keyframeIndex = EditorGUILayout.Popup("KeyFrameIndex", targetComponents.inspectorTemp.keyframeIndex, Enumerable.Range(0, keyframenum).Select(e => e.ToString() + (targetComponents.hitboxes[animname].keyframes[e].colliders.Count > 0 ? " *" : "")).ToArray());
 
 
