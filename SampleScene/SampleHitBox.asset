@@ -1,0 +1,138 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-5275756855693468855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 993653eb391814d459b103a1a516ff34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  additionalData: {fileID: 0}
+  rect:
+    serializedVersion: 2
+    x: 0.14661014
+    y: 0.26180387
+    width: 1.0330508
+    height: 0.51991546
+--- !u!114 &-1008694740824982487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 993653eb391814d459b103a1a516ff34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  additionalData: {fileID: 0}
+  rect:
+    serializedVersion: 2
+    x: 0.3351091
+    y: -0.041888595
+    width: 1.4309931
+    height: 1.6509084
+--- !u!114 &-8548135146648174
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 993653eb391814d459b103a1a516ff34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  additionalData: {fileID: 0}
+  rect:
+    serializedVersion: 2
+    x: 0.43983066
+    y: 0.5131357
+    width: 1.0749395
+    height: 0.84455264
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cbb7edaf71750194cbd4a44cc4dff5bf, type: 3}
+  m_Name: SampleHitBox
+  m_EditorClassIdentifier: 
+  data:
+  - Key: atk
+    Value:
+      keyframes:
+      - colliders: []
+      - colliders: []
+      - colliders: []
+      - colliders:
+        - colliderParam: {fileID: -5275756855693468855}
+          tag: atk
+          layer: Default
+          dulation: 1
+          startframe: 3
+          data: 
+      - colliders: []
+      - colliders: []
+      - colliders:
+        - colliderParam: {fileID: -8548135146648174}
+          tag: atk
+          layer: Default
+          dulation: 1
+          startframe: 6
+          data: 
+        - colliderParam: {fileID: 7809407151592506176}
+          tag: Untagged
+          layer: Default
+          dulation: 1
+          startframe: 6
+          data: 
+      - colliders: []
+      - colliders: []
+      - colliders: []
+      - colliders: []
+      - colliders: []
+      - colliders: []
+      - colliders: []
+      - colliders:
+        - colliderParam: {fileID: -1008694740824982487}
+          tag: atk
+          layer: Default
+          dulation: 1
+          startframe: 14
+          data: 
+      - colliders: []
+  - Key: Default
+    Value:
+      keyframes:
+      - colliders: []
+--- !u!114 &7809407151592506176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 993653eb391814d459b103a1a516ff34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  additionalData: {fileID: 0}
+  rect:
+    serializedVersion: 2
+    x: -0.32097805
+    y: 0
+    width: 0.747077
+    height: 0.42609864

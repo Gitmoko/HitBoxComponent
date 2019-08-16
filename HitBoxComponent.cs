@@ -91,6 +91,7 @@ public class HitBoxComponentInspectorTemporaryValue
 {
     public int animationindex;
     public int keyframeIndex;
+    public int traceAnimMode;
 }
 
 public enum DirectionType
@@ -292,7 +293,11 @@ public class HitBoxComponent : MonoBehaviour
             return;
         }
 
-        foreach (var state in simpleAnimation.GetEditorStates())
+        //simpleanimationに存在しないステートのデータがHitBoxesに入っている場合削除
+        var states = simpleAnimation.GetEditorStates();
+        hitboxes.data.RemoveAll(hitboxkeyval => !states.Any((s) => s.name == hitboxkeyval.Key));
+
+        foreach (var state in states)
         {
             //ToInt32は四捨五入するので、多少の誤差があっても正確にフレーム数を取得できる
             var numframe = Convert.ToInt32(state.clip.length * state.clip.frameRate);
@@ -319,6 +324,29 @@ public class HitBoxComponent : MonoBehaviour
         }
     }
 
+    //targethitboxesの中身が現在のsimpleAnimationの構成と一致するかを返す
+    public bool IsStructureSame(HitBoxes targethitboxes)
+    {
+
+        if (hitboxes == null)
+        {
+            return true;
+        }
+
+        var states = simpleAnimation.GetEditorStates();
+        foreach (var e in targethitboxes.data)
+        {
+            //simpleanimationに存在しないstate名がtargethitboxesの中にあれば構成が一致していないとみなす
+            if (!states.Any(s => s.name == e.Key))
+            {
+                return false;
+            }
+        }
+
+        return true;
+
+    }
+
     public List<string> GetStateNames()
     {
         var animationStates = simpleAnimation.GetEditorStates();
@@ -328,6 +356,12 @@ public class HitBoxComponent : MonoBehaviour
             statenames.Add(animationStates[i].name);
         }
         return statenames;
+    }
+
+    public SimpleAnimation.EditorState GetState(string statename)
+    {
+        var state = simpleAnimation.GetEditorStates().First(e => e.name == statename);
+        return state;
     }
 
     public string GetClipName(string statename)

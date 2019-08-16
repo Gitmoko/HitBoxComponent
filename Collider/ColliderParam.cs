@@ -1,9 +1,11 @@
 ﻿using System;
 using UnityEngine;
 
+
 [Serializable]
 public class ColliderParam : ScriptableObject
 {
+    public ColliderAdditionalData additionalData = null;
 
     virtual public ColliderShape GetShape()
     {

@@ -26,20 +26,19 @@ public class AnimationHelper
 
     public static void init()
     {
-        if (initflag == false)
-        {
-            _window = GetOpenAnimationWindow();
 
-            _flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
-            _animEditor = GetAnimationWindowType().GetField("m_AnimEditor", _flags);
+        _window = GetOpenAnimationWindow();
 
-            _animEditorType = _animEditor.FieldType;
-            _animEditorObject = _animEditor.GetValue(_window);
-            _animWindowState = _animEditorType.GetField("m_State", _flags);
-            _animobj = _animWindowState.GetValue(_animEditorObject);
-            _windowStateType = _animWindowState.FieldType;
-            initflag = true;
-        }
+        _flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+        _animEditor = GetAnimationWindowType().GetField("m_AnimEditor", _flags);
+
+        _animEditorType = _animEditor.FieldType;
+        _animEditorObject = _animEditor.GetValue(_window);
+        _animWindowState = _animEditorType.GetField("m_State", _flags);
+        _animobj = _animWindowState.GetValue(_animEditorObject);
+        _windowStateType = _animWindowState.FieldType;
+        initflag = true;
+
     }
 
 
@@ -121,6 +120,16 @@ public class AnimationHelper
         }
 
         return ret;
+    }
+
+    public static void SetCurrentClip(AnimationClip clip)
+    {
+        if (_window != null)
+        {
+            PropertyInfo pi = _windowStateType.GetProperty("activeAnimationClip");
+            pi.SetValue(_animobj, clip);
+
+        }
     }
 
     private static System.Type animationWindowType = null;

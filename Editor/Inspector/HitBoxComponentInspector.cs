@@ -1,8 +1,9 @@
 ﻿using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-internal enum TraceAnimMode
+public enum TraceAnimMode
 {
     Off,
     AnimationWindow,
@@ -15,7 +16,7 @@ public class HitBoxComponentInspector : Editor
 
     private HitBoxComponent targetComponents;
     private TraceAnimMode traceAnimMode = TraceAnimMode.Off;
-    private int traceAnimModeStateNameCandidate = 0;
+    private string addScriptableObjectName = "";
 
     private static GUIStyle hitboxBackgroundStyle;
 
@@ -27,10 +28,7 @@ public class HitBoxComponentInspector : Editor
     #region Drawing Methods
     public override void OnInspectorGUI()
     {
-        if (!Application.isPlaying)
-        {
-            targetComponents.SyncKeyFramesWithSimpleAnimator();
-        }
+
 
         serializedObject.Update();
 
@@ -38,13 +36,46 @@ public class HitBoxComponentInspector : Editor
         EditorGUI.BeginChangeCheck();
         GUI.skin.label.wordWrap = true;
 
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("New HitBox Name:");
+        addScriptableObjectName = GUILayout.TextField(addScriptableObjectName);
+        GUILayout.EndHorizontal();
+        if (addScriptableObjectName != "" && GUILayout.Button("Create And Add"))
+        {
+            if (addScriptableObjectName == "")
+            {
+                Debug.Log("Don't set empty name");
+            }
+            else
+            {
+                var newhitbox = CreateInstance<HitBoxes>();
+                targetComponents.hitboxes = newhitbox;
+                var path = AssetDatabase.GenerateUniqueAssetPath("Assets/" + addScriptableObjectName + ".asset");
+                AssetDatabase.CreateAsset(newhitbox, path);
+                addScriptableObjectName = "";
+                targetComponents.SyncKeyFramesWithSimpleAnimator();
+            }
+        };
+
+
+        EditorGUI.BeginChangeCheck();
+        var prehitbox = targetComponents.hitboxes;
         var proph = serializedObject.FindProperty("hitboxes");
         EditorGUILayout.PropertyField(proph, true);
 
         if (EditorGUI.EndChangeCheck())
         {
-            serializedObject.ApplyModifiedProperties();
-            targetComponents.SyncKeyFramesWithSimpleAnimator();
+            if (proph.objectReferenceValue == null || targetComponents.IsStructureSame((HitBoxes)proph.objectReferenceValue) || EditorUtility.DisplayDialog("", "this operation will break the hitboxdata you selected now. really do this?", "do", "cancel"))
+            {
+
+                serializedObject.ApplyModifiedProperties();
+                targetComponents.SyncKeyFramesWithSimpleAnimator();
+            }
+            else
+            {
+                return;
+            }
         }
 
         if (targetComponents.hitboxes == null)
@@ -106,9 +137,9 @@ public class HitBoxComponentInspector : Editor
         }
         catch
         {
-            animationindex = targetComponents.GetStateNames().FindIndex(e => e == targetComponents.GetNowStateName());
-            keyframeIndex = targetComponents.GetNowKeyFrame();
+            return;
         }
+
         foreach (var col in targetComponents.hitboxes[animname].keyframes[keyframeIndex].colliders)
         {
 
@@ -169,6 +200,8 @@ public class HitBoxComponentInspector : Editor
 
             EditorUtility.SetDirty(targetComponents.hitboxes);
             Handles.color = precolor;
+
+            Repaint();
 #endif
         }
 
@@ -178,31 +211,34 @@ public class HitBoxComponentInspector : Editor
     private void DrawHitboxes()
     {
 
-        var animlist = targetComponents.GetStateNames();
 
         traceAnimMode = (TraceAnimMode)EditorGUILayout.Popup("trace Animation Mode", (int)traceAnimMode, new string[] { "Off", "AnimationWindow", "Scene(PlayOnly)" });
+        targetComponents.inspectorTemp.traceAnimMode = (int)traceAnimMode;
         if (traceAnimMode == TraceAnimMode.AnimationWindow)
         {
             var currentFrame = AnimationHelper.GetCurrentFrame();
             targetComponents.inspectorTemp.keyframeIndex = currentFrame;
 
 
-            var clipname = AnimationHelper.GetCurrentClipName();
-            var statenameCandidate = targetComponents.simpleAnimation.GetEditorStates().Where((e) => e.clip.name == clipname).Select(e => e.name);
+            var AnimGuiClipname = AnimationHelper.GetCurrentClipName();
+            var preanimationindex = targetComponents.inspectorTemp.animationindex;
+            targetComponents.inspectorTemp.animationindex = EditorGUILayout.Popup("AnimStateName", targetComponents.inspectorTemp.animationindex, targetComponents.GetStateNames().ToArray());
+            var selectedStateName = targetComponents.GetStateNames()[targetComponents.inspectorTemp.animationindex];
+            var selectedState = targetComponents.GetState(selectedStateName);
+            if (AnimGuiClipname != selectedState.clip.name)
+            {
+                AnimationHelper.SetCurrentClip(selectedState.clip);
+                Debug.Log("From HitBoxComponent: Now AnimationWindow is synchronized with HitBoxComponent. If you want to change AnimationClip of AnimationWindow, turn \"TraceAnimMode\" off on HitBoxComponent Inspector");
+            }
+            EditorGUILayout.LabelField("Clipname", selectedState.clip.name);
 
-            traceAnimModeStateNameCandidate = EditorGUILayout.Popup("AnimStateName", traceAnimModeStateNameCandidate, statenameCandidate.ToArray());
-            var statename = statenameCandidate.ToList()[traceAnimModeStateNameCandidate];
-            EditorGUILayout.LabelField("Clipname", targetComponents.GetClipName(statename));
-
-            targetComponents.inspectorTemp.animationindex = animlist.FindIndex(e => e == statename);
-
-            if (targetComponents.inspectorTemp.keyframeIndex >= targetComponents.hitboxes[statename].keyframes.Count)
+            if (targetComponents.inspectorTemp.keyframeIndex >= targetComponents.hitboxes[selectedStateName].keyframes.Count)
             {
                 return;
             }
 ;
         }
-        else if (traceAnimMode == TraceAnimMode.Scene)
+        if (traceAnimMode == TraceAnimMode.Scene)
         {
             if (!Application.isPlaying)
             {
@@ -212,33 +248,33 @@ public class HitBoxComponentInspector : Editor
             targetComponents.inspectorTemp.keyframeIndex = currentFrame;
             var nowstate = targetComponents.GetNowState();
             EditorGUILayout.LabelField("NowStateName", nowstate.name);
-            targetComponents.inspectorTemp.animationindex = animlist.FindIndex(e => e == nowstate.name);
+            targetComponents.inspectorTemp.animationindex = targetComponents.GetStateNames().FindIndex(e => e == nowstate.name);
             EditorGUILayout.LabelField("Clipname", nowstate.clip.name);
 
         }
-        else
+        if (traceAnimMode == TraceAnimMode.Off)
         {
             targetComponents.inspectorTemp.animationindex = EditorGUILayout.Popup("AnimStateName", targetComponents.inspectorTemp.animationindex, targetComponents.GetStateNames().ToArray());
-            var statename = animlist[targetComponents.inspectorTemp.animationindex];
+            var statename = targetComponents.GetStateNames()[targetComponents.inspectorTemp.animationindex];
             EditorGUILayout.LabelField("ClipName", targetComponents.GetClipName(statename));
         }
 
         EditorGUILayout.LabelField("Flip", targetComponents.direction.ToString());
 
-        if (Application.isPlaying && traceAnimMode == 0)
+        if (Application.isPlaying && traceAnimMode == TraceAnimMode.Off)
         {
 
             if (GUILayout.Button("Show Now KeyFrame Data"))
             {
                 var nowanim = targetComponents.GetNowStateName();
                 var keyframe = targetComponents.GetNowKeyFrame();
-                targetComponents.inspectorTemp.animationindex = animlist.FindIndex(0, e => e == nowanim);
+                targetComponents.inspectorTemp.animationindex = targetComponents.GetStateNames().FindIndex(0, e => e == nowanim);
                 targetComponents.inspectorTemp.keyframeIndex = keyframe;
 
             }
         }
 
-        var animname = animlist[targetComponents.inspectorTemp.animationindex];
+        var animname = targetComponents.GetStateNames()[targetComponents.inspectorTemp.animationindex];
 
         var keyframenum = targetComponents.hitboxes[animname].keyframes.Count;
 
@@ -333,16 +369,13 @@ public class HitBoxComponentInspector : Editor
 
     private void DrawColliderParam(ColliderParam colliderParam)
     {
+        EditorGUI.BeginChangeCheck();
         if (colliderParam is RectColliderParam)
         {
-            EditorGUI.BeginChangeCheck();
+
             var rect = colliderParam as RectColliderParam;
             var newrect = EditorGUILayout.RectField(rect.rect);
             rect.rect = newrect;
-            if (EditorGUI.EndChangeCheck())
-            {
-                EditorUtility.SetDirty(rect);
-            }
 
 
         }
@@ -370,6 +403,66 @@ public class HitBoxComponentInspector : Editor
             Debug.Log("not implemented");
         }
 
+
+        GUILayout.BeginHorizontal();
+        var additionalDataInfoLabel = colliderParam.additionalData == null ? "null" : colliderParam.additionalData.GetType().ToString();
+        EditorGUILayout.LabelField(additionalDataInfoLabel);
+        if (GUILayout.Button("Set Additional Collider Data"))
+        {
+            GenericMenu menu = new GenericMenu();
+            var assembly = Assembly.Load("Assembly-CSharp");
+            var dlist = assembly.GetTypes().Where(c => c.IsSubclassOf(typeof(ColliderAdditionalData))).ToList();
+            menu.AddItem(new GUIContent("None"), false, () =>
+            {
+                if (colliderParam.additionalData != null)
+                {
+                    var path = AssetDatabase.GetAssetPath(colliderParam.additionalData);
+                    AssetDatabase.RemoveObjectFromAsset(colliderParam.additionalData);
+                    colliderParam.additionalData = null;
+                    AssetDatabase.Refresh();
+                    AssetDatabase.ImportAsset(path);
+                }
+
+            });
+            // forward slashes nest menu items under submenus
+            foreach (var info in dlist)
+            {
+                menu.AddItem(new GUIContent(info.ToString()), false, e =>
+                {
+
+                    if (colliderParam.additionalData != null)
+                    {
+                        var path = AssetDatabase.GetAssetPath(colliderParam.additionalData);
+                        AssetDatabase.RemoveObjectFromAsset(colliderParam.additionalData);
+                    }
+
+                    colliderParam.additionalData = (ColliderAdditionalData)CreateInstance(info.ToString());
+                    var parentpath = AssetDatabase.GetAssetPath(colliderParam);
+                    AssetDatabase.AddObjectToAsset(colliderParam.additionalData, parentpath);
+
+                    //インポート処理を走らせて最新の状態にする
+                    AssetDatabase.Refresh();
+                    AssetDatabase.ImportAsset(parentpath);
+
+
+                }
+                , info);
+            }
+            menu.ShowAsContext();
+        }
+        GUILayout.EndHorizontal();
+
+        if (colliderParam.additionalData != null)
+        {
+            colliderParam.additionalData.DrawInspectorGUI();
+
+        }
+
+
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorUtility.SetDirty(colliderParam);
+        }
     }
 
     private void SetGizmoControllerParam()
@@ -377,8 +470,7 @@ public class HitBoxComponentInspector : Editor
 
         var animationindex = targetComponents.inspectorTemp.animationindex;
         var keyframeIndex = targetComponents.inspectorTemp.keyframeIndex;
-        var animlist = targetComponents.GetStateNames().ToArray();
-        var animname = animlist[animationindex];
+        var animname = targetComponents.GetStateNames()[animationindex];
 
         if (targetComponents.gizmoController != null)
         {
@@ -434,6 +526,15 @@ public class HitBoxComponentInspector : Editor
 
         targetComponents = target as HitBoxComponent;
         AnimationHelper.init();
+
+        targetComponents.SyncKeyFramesWithSimpleAnimator();
+
+        if (targetComponents.inspectorTemp != null)
+        {
+            var state = targetComponents.GetState(targetComponents.GetStateNames()[targetComponents.inspectorTemp.animationindex]);
+            AnimationHelper.SetCurrentClip(state.clip);
+            traceAnimMode = (TraceAnimMode)targetComponents.inspectorTemp.traceAnimMode;
+        }
     }
 
 }
