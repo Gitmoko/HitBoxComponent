@@ -376,7 +376,8 @@ public class HitBoxComponentInspector : Editor
             var rect = colliderParam as RectColliderParam;
             var newrect = EditorGUILayout.RectField(rect.rect);
             rect.rect = newrect;
-
+            var is2d = EditorGUILayout.Toggle("is 2D", rect.is2d);
+            rect.is2d = is2d;
 
         }
         else if (colliderParam is SphereColliderParam)

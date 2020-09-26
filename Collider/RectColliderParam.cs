@@ -6,6 +6,7 @@ using UnityEngine;
 public class RectColliderParam : ColliderParam
 {
     public Rect rect = new Rect(0, 0, 0.3f, 0.3f);
+    public bool is2d = false;
 
     override public ColliderShape GetShape()
     {

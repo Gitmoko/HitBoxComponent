@@ -240,10 +240,8 @@ public class HitBoxComponent : MonoBehaviour
 
         var ret = new GameObject("test");
         var objtrans = ret.GetComponent<Transform>();
-        var rigidbody = ret.AddComponent<Rigidbody>();
         var colliderinfo = ret.AddComponent<ColliderInfo>();
         colliderinfo.keyframecollider = keyframe;
-        rigidbody.useGravity = false;
 
         var param = keyframe.colliderParam;
 
@@ -253,12 +251,26 @@ public class HitBoxComponent : MonoBehaviour
         if (param is RectColliderParam)
         {
             var rect = param as RectColliderParam;
-            var col = ret.AddComponent<BoxCollider>();
-            col.center = new Vector3(rect.rect.center.x * sign, rect.rect.center.y, 0.0f);
-            col.size = new Vector3(rect.rect.size.x, rect.rect.size.y, 0.2f);
-            col.tag = keyframe.tag;
-            col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
-            col.isTrigger = true;
+            if (rect.is2d)
+            {
+                var col = ret.AddComponent<BoxCollider2D>();
+                col.offset = new Vector3(rect.rect.center.x * sign, rect.rect.center.y);
+                col.size = new Vector3(rect.rect.size.x, rect.rect.size.y);
+                col.tag = keyframe.tag;
+                col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
+                col.isTrigger = true;
+                ret.AddComponent<Rigidbody2D>();
+            }
+            else
+            {
+                var col = ret.AddComponent<BoxCollider>();
+                col.center = new Vector3(rect.rect.center.x * sign, rect.rect.center.y, 0.0f);
+                col.size = new Vector3(rect.rect.size.x, rect.rect.size.y, 0.2f);
+                col.tag = keyframe.tag;
+                col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
+                col.isTrigger = true;
+                ret.AddComponent<Rigidbody>().useGravity = true;
+            }
         }
         else if (param is SphereColliderParam)
         {
@@ -269,6 +281,7 @@ public class HitBoxComponent : MonoBehaviour
             col.tag = keyframe.tag;
             col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
             col.isTrigger = true;
+            ret.AddComponent<Rigidbody>().useGravity = true;
 
         }
         else if (param is CapsuleColliderParam)
