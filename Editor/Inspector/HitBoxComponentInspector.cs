@@ -99,12 +99,6 @@ public class HitBoxComponentInspector : Editor
         serializedObject.ApplyModifiedProperties();
 
 
-
-        if (EditorGUI.EndChangeCheck())
-        {
-            Undo.RecordObject(targetComponents.hitboxes, "change hitbox");
-        }
-
         SetGizmoControllerParam();
     }
 
@@ -279,7 +273,11 @@ public class HitBoxComponentInspector : Editor
         var keyframenum = targetComponents.hitboxes[animname].keyframes.Count;
 
         targetComponents.inspectorTemp.keyframeIndex = EditorGUILayout.Popup("KeyFrameIndex", targetComponents.inspectorTemp.keyframeIndex, Enumerable.Range(0, keyframenum).Select(e => e.ToString() + (targetComponents.hitboxes[animname].keyframes[e].colliders.Count > 0 ? " *" : "")).ToArray());
-
+        if (traceAnimMode == TraceAnimMode.AnimationWindow)
+        {
+            AnimationHelper.SetCurrentFrame(targetComponents.inspectorTemp.keyframeIndex);
+            AnimationHelper.RepaintOpenAnimationWindow();
+        }
 
         var animationindex = targetComponents.inspectorTemp.animationindex;
         var keyframeIndex = targetComponents.inspectorTemp.keyframeIndex;

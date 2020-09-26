@@ -85,7 +85,9 @@ public class AnimationHelper
     {
         if (_window != null)
         {
-            _windowStateType.InvokeMember("set_currentFrame", BindingFlags.InvokeMethod | BindingFlags.Public, null, _animWindowState.GetValue(_animEditorObject), new object[1] { frame });
+            PropertyInfo pi = _windowStateType.GetProperty("currentFrame");
+            pi.SetValue(_animobj, (object)frame);
+            //System.Object frame = _windowStateType.InvokeMember("currentTime", BindingFlags.InvokeMethod | BindingFlags.Public, null, _animWindowState.GetValue(_animEditorObject), null);
         }
     }
 
@@ -153,7 +155,7 @@ public class AnimationHelper
         return null;
     }
 
-    private static void RepaintOpenAnimationWindow()
+    public static void RepaintOpenAnimationWindow()
     {
         UnityEngine.Object w = GetOpenAnimationWindow();
         if (w != null)
