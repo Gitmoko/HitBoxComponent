@@ -128,6 +128,8 @@ public class HitBoxComponent : MonoBehaviour
 
     private SimpleAnimation.State prestate = null;
 
+    public bool stateChanged = false;
+
 
     private void OnEnable()
     {
@@ -147,11 +149,16 @@ public class HitBoxComponent : MonoBehaviour
         {
             ;
 
-            var nowstates = simpleAnimation.GetStates().First(s => s.enabled);
+            var nowstates = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
+            if (nowstates == null)
+            {
+                return;
+            }
+        
             //var newKeyframesIndex = Convert.ToInt32(Math.Floor(hitboxes[nowstates.name].keyframes.Count * elapsedTime));
             var newKeyframesIndex = GetNowKeyFrame();
 
-            if (prestate == null || prestate.name != nowstates.name)
+            if (prestate == null || stateChanged)
             {
                 prestate = nowstates;
                 foreach (var e in nowColliders)
@@ -163,6 +170,7 @@ public class HitBoxComponent : MonoBehaviour
                 }
                 nowColliders.Clear();
                 preveousKeyFrameIndex = -1;
+                stateChanged = false;
             }
 
             if (preveousKeyFrameIndex != newKeyframesIndex)
@@ -192,20 +200,21 @@ public class HitBoxComponent : MonoBehaviour
                     Destroy(e);
                 }
 
-
-                for (int i = preveousKeyFrameIndex + 1; i <= newKeyframesIndex; i++)
+                //新たに発生したcolliderの追加
+                if (hitboxes.data.Find(e => e.Key == nowstates.name) != null)
                 {
-                    //新たに発生したcolliderの追加
-                    foreach (var e in hitboxes[nowstates.name].keyframes[i].colliders)
+                    for (int i = preveousKeyFrameIndex + 1; i <= newKeyframesIndex; i++)
                     {
-                        Debug.Log("create col");
-                        var col = AddColliderComponentFromParam(e);
-                        nowColliders.Add(new KVPair<GameObject, KeyFrameCollider>(col, e));
+                        foreach (var e in hitboxes[nowstates.name].keyframes[i].colliders)
+                        {
+                            Debug.Log("create col");
+                            var col = AddColliderComponentFromParam(e);
+                            nowColliders.Add(new KVPair<GameObject, KeyFrameCollider>(col, e));
+
+                        }
 
                     }
-
                 }
-                preveousKeyFrameIndex = newKeyframesIndex;
                 /*
                 if (KeyframesIndex == 0)
                 {
@@ -226,11 +235,8 @@ public class HitBoxComponent : MonoBehaviour
 
                 }
                 */
-
             }
-
-
-
+            preveousKeyFrameIndex = newKeyframesIndex;
         }
     }
 
@@ -259,7 +265,10 @@ public class HitBoxComponent : MonoBehaviour
                 col.tag = keyframe.tag;
                 col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
                 col.isTrigger = true;
-                ret.AddComponent<Rigidbody2D>();
+                var r2d = ret.AddComponent<Rigidbody2D>();
+                r2d.gravityScale = 0;
+                r2d.isKinematic = true;
+               
             }
             else
             {
@@ -269,7 +278,9 @@ public class HitBoxComponent : MonoBehaviour
                 col.tag = keyframe.tag;
                 col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
                 col.isTrigger = true;
-                ret.AddComponent<Rigidbody>().useGravity = true;
+                var rd = ret.AddComponent<Rigidbody>();
+                rd.isKinematic = true;
+                rd.useGravity = false;
             }
         }
         else if (param is SphereColliderParam)
@@ -281,7 +292,9 @@ public class HitBoxComponent : MonoBehaviour
             col.tag = keyframe.tag;
             col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
             col.isTrigger = true;
-            ret.AddComponent<Rigidbody>().useGravity = true;
+            var rd = ret.AddComponent<Rigidbody>();
+            rd.isKinematic = true;
+            rd.useGravity = false;
 
         }
         else if (param is CapsuleColliderParam)
@@ -417,6 +430,15 @@ public class HitBoxComponent : MonoBehaviour
         return ret;
     }
 
+    public int GetElapsedFrame()
+    {
+        var nowstate = simpleAnimation.GetStates().First(s => s.enabled);
+        var normalizedTime = nowstate.normalizedTime;
+        int ret = Convert.ToInt32(Math.Floor(nowstate.clip.frameRate * nowstate.clip.length * normalizedTime));
+        
+        return ret;
+    }
+
     public float GetDirectionSign()
     {
         float ret = (direction == DirectionType.Forward) ? 1.0f : -1.0f;
@@ -433,5 +455,15 @@ public class HitBoxComponent : MonoBehaviour
         {
             direction = DirectionType.Forward;
         }
+    }
+
+    public void PlayAnimation(string name)
+    {
+        //同じnameのステートを呼び出しても、AnimationClipの先頭のイベントは呼び出されない
+        //先頭以降なら呼び出されそう
+        //「アニメーションが始まったフレームで行いたい処理」はイベント以外でやった方がよさそう
+        simpleAnimation.Stop();
+        simpleAnimation.Play(name);
+        stateChanged = true;
     }
 }
