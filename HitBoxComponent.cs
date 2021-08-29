@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 
@@ -130,6 +131,10 @@ public class HitBoxComponent : MonoBehaviour
 
     public bool stateChanged = false;
 
+    private bool autoEnd;
+
+    private Action autoEndCallback;
+
 
     private void OnEnable()
     {
@@ -153,6 +158,13 @@ public class HitBoxComponent : MonoBehaviour
             if (nowstates == null)
             {
                 return;
+            }
+
+            if(autoEnd && GetElapsedNormalizedTime() >= 1){
+                autoEndCallback?.Invoke();
+                simpleAnimation.Play("Default");
+                autoEnd = false;
+                autoEndCallback = null;
             }
         
             //var newKeyframesIndex = Convert.ToInt32(Math.Floor(hitboxes[nowstates.name].keyframes.Count * elapsedTime));
@@ -248,6 +260,7 @@ public class HitBoxComponent : MonoBehaviour
         var objtrans = ret.GetComponent<Transform>();
         var colliderinfo = ret.AddComponent<ColliderInfo>();
         colliderinfo.keyframecollider = keyframe;
+        colliderinfo.hitboxParent = gameObject;
 
         var param = keyframe.colliderParam;
 
@@ -320,7 +333,7 @@ public class HitBoxComponent : MonoBehaviour
         }
 
         //simpleanimationに存在しないステートのデータがHitBoxesに入っている場合削除
-        var states = simpleAnimation.GetEditorStates();
+        var states = GetEditorStates();
         hitboxes.data.RemoveAll(hitboxkeyval => !states.Any((s) => s.name == hitboxkeyval.Key));
 
         foreach (var state in states)
@@ -359,7 +372,7 @@ public class HitBoxComponent : MonoBehaviour
             return true;
         }
 
-        var states = simpleAnimation.GetEditorStates();
+        var states = GetEditorStates();
         foreach (var e in targethitboxes.data)
         {
             //simpleanimationに存在しないstate名がtargethitboxesの中にあれば構成が一致していないとみなす
@@ -375,7 +388,7 @@ public class HitBoxComponent : MonoBehaviour
 
     public List<string> GetStateNames()
     {
-        var animationStates = simpleAnimation.GetEditorStates();
+        var animationStates = GetEditorStates();
         var statenames = new List<string>();
         for (int i = 0; i < animationStates.Length; i++)
         {
@@ -386,13 +399,13 @@ public class HitBoxComponent : MonoBehaviour
 
     public SimpleAnimation.EditorState GetState(string statename)
     {
-        var state = simpleAnimation.GetEditorStates().First(e => e.name == statename);
+        var state = GetEditorStates().First(e => e.name == statename);
         return state;
     }
 
     public string GetClipName(string statename)
     {
-        var clipname = simpleAnimation.GetEditorStates().First(e => e.name == statename).clip.name;
+        var clipname = GetEditorStates().First(e => e.name == statename).clip.name;
         return clipname;
     }
 
@@ -439,6 +452,14 @@ public class HitBoxComponent : MonoBehaviour
         return ret;
     }
 
+        public float GetElapsedNormalizedTime()
+    {
+        var nowstate = simpleAnimation.GetStates().First(s => s.enabled);
+        var normalizedTime = nowstate.normalizedTime;
+
+        return normalizedTime;
+    }
+
     public float GetDirectionSign()
     {
         float ret = (direction == DirectionType.Forward) ? 1.0f : -1.0f;
@@ -457,7 +478,7 @@ public class HitBoxComponent : MonoBehaviour
         }
     }
 
-    public void PlayAnimation(string name)
+    public void PlayAnimation(string name, bool autoEnd = false, Action callBack = null)
     {
         //同じnameのステートを呼び出しても、AnimationClipの先頭のイベントは呼び出されない
         //先頭以降なら呼び出されそう
@@ -465,5 +486,21 @@ public class HitBoxComponent : MonoBehaviour
         simpleAnimation.Stop();
         simpleAnimation.Play(name);
         stateChanged = true;
+
+        if(autoEnd){
+            this.autoEnd = autoEnd;
+            autoEndCallback = callBack;
+        }
+    }
+
+    private SimpleAnimation.EditorState[] GetEditorStates(){
+            Type type = simpleAnimation.GetType();
+
+            //// 以下privateフィールドの値を無理やり取得する
+            // Typeからフィールドを探す。フィールド名とBindingFlagsを引数にする。
+            FieldInfo field = type.GetField("m_States", BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance);
+            SimpleAnimation.EditorState[] states = (SimpleAnimation.EditorState[])(field.GetValue(simpleAnimation));
+
+            return states;
     }
 }
