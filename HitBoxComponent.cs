@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
-
+using UnityEngine.SocialPlatforms;
 
 [Serializable]
 public class KVPair<TKey, TValue>
@@ -57,6 +57,9 @@ public class HitBoxKeyFrames
 {
     [SerializeField]
     public List<KeyFrameData> keyframes = new List<KeyFrameData>();
+
+    [SerializeField]
+    public bool isLoopFrame;
 }
 
 
@@ -123,7 +126,7 @@ public class HitBoxComponent : MonoBehaviour
     public DirectionType direction = DirectionType.Forward;
 
 
-    private List<KVPair<GameObject, KeyFrameCollider>> nowColliders = new List<KVPair<GameObject, KeyFrameCollider>>();
+    private List<KVPair<GameObject, ColliderInfo>> nowColliders = new List<KVPair<GameObject, ColliderInfo>>();
 
     private int preveousKeyFrameIndex = -1;
 
@@ -165,10 +168,11 @@ public class HitBoxComponent : MonoBehaviour
                 simpleAnimation.Play("Default");
                 autoEnd = false;
                 autoEndCallback = null;
+                preveousKeyFrameIndex = -1;
             }
         
-            //var newKeyframesIndex = Convert.ToInt32(Math.Floor(hitboxes[nowstates.name].keyframes.Count * elapsedTime));
-            var newKeyframesIndex = GetNowKeyFrame();
+     
+            var newKeyframesIndex = !hitboxes[nowstates.name].isLoopFrame ? GetNowKeyFrame() : GetElapsedFrame();
 
             if (prestate == null || stateChanged)
             {
@@ -192,10 +196,10 @@ public class HitBoxComponent : MonoBehaviour
                 ///生存期間のすぎたcolliderのリスト化
 
 
-                nowColliders.RemoveAll((KVPair<GameObject, KeyFrameCollider> e) =>
+                nowColliders.RemoveAll((KVPair<GameObject, ColliderInfo> e) =>
                 {
-                    var elapsed = newKeyframesIndex - e.Value.startframe;
-                    if (elapsed >= e.Value.dulation && e.Key.activeSelf)
+                    var elapsed = newKeyframesIndex - e.Value.startFrame;
+                    if (elapsed >= e.Value.keyframecollider.dulation && e.Key.activeSelf)
                     {
 
                         destroylist.Add(e.Key);
@@ -215,16 +219,19 @@ public class HitBoxComponent : MonoBehaviour
                 //新たに発生したcolliderの追加
                 if (hitboxes.data.Find(e => e.Key == nowstates.name) != null)
                 {
-                    for (int i = preveousKeyFrameIndex + 1; i <= newKeyframesIndex; i++)
+                    var keyFrameNum = hitboxes[nowstates.name].keyframes.Count;
+                    var isLoopFrame = hitboxes[nowstates.name].isLoopFrame;
+                    var elapsedKeyframes = Enumerable.Range(preveousKeyFrameIndex + 1,newKeyframesIndex - preveousKeyFrameIndex);
+
+                    foreach (var i in elapsedKeyframes)
                     {
-                        foreach (var e in hitboxes[nowstates.name].keyframes[i].colliders)
+                        var clampedFrame = !isLoopFrame ? i :( i % keyFrameNum);
+                        foreach (var e in hitboxes[nowstates.name].keyframes[clampedFrame].colliders)
                         {
                             Debug.Log("create col");
-                            var col = AddColliderComponentFromParam(e);
-                            nowColliders.Add(new KVPair<GameObject, KeyFrameCollider>(col, e));
-
+                            var col = AddColliderComponentFromParam(e, i);
+                            nowColliders.Add(new KVPair<GameObject, ColliderInfo>(col.gameObject, col));
                         }
-
                     }
                 }
                 /*
@@ -252,7 +259,7 @@ public class HitBoxComponent : MonoBehaviour
         }
     }
 
-    public GameObject AddColliderComponentFromParam(KeyFrameCollider keyframe)
+    public ColliderInfo AddColliderComponentFromParam(KeyFrameCollider keyframe, int startFrame)
     {
 
 
@@ -261,6 +268,7 @@ public class HitBoxComponent : MonoBehaviour
         var colliderinfo = ret.AddComponent<ColliderInfo>();
         colliderinfo.keyframecollider = keyframe;
         colliderinfo.hitboxParent = gameObject;
+        colliderinfo.startFrame = startFrame;
 
         var param = keyframe.colliderParam;
 
@@ -320,7 +328,7 @@ public class HitBoxComponent : MonoBehaviour
         }
         objtrans.SetParent(gameObject.transform, false);
 
-        return ret;
+        return colliderinfo;
 
     }
 

@@ -232,6 +232,9 @@ public class HitBoxComponentInspector : Editor
             }
 ;
         }
+        var animname = targetComponents.GetStateNames()[targetComponents.inspectorTemp.animationindex];
+        var keyframenum = targetComponents.hitboxes[animname].keyframes.Count;
+
         if (traceAnimMode == TraceAnimMode.Scene)
         {
             if (!Application.isPlaying)
@@ -254,6 +257,7 @@ public class HitBoxComponentInspector : Editor
         }
 
         EditorGUILayout.LabelField("Flip", targetComponents.direction.ToString());
+        targetComponents.hitboxes[animname].isLoopFrame = EditorGUILayout.Toggle("Is Loop FrameData", targetComponents.hitboxes[animname].isLoopFrame);
 
         if (Application.isPlaying && traceAnimMode == TraceAnimMode.Off)
         {
@@ -268,9 +272,6 @@ public class HitBoxComponentInspector : Editor
             }
         }
 
-        var animname = targetComponents.GetStateNames()[targetComponents.inspectorTemp.animationindex];
-
-        var keyframenum = targetComponents.hitboxes[animname].keyframes.Count;
 
         targetComponents.inspectorTemp.keyframeIndex = EditorGUILayout.Popup("KeyFrameIndex", targetComponents.inspectorTemp.keyframeIndex, Enumerable.Range(0, keyframenum).Select(e => e.ToString() + (targetComponents.hitboxes[animname].keyframes[e].colliders.Count > 0 ? " *" : "")).ToArray());
         if (traceAnimMode == TraceAnimMode.AnimationWindow)
