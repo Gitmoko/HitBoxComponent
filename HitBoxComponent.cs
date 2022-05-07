@@ -486,13 +486,14 @@ public class HitBoxComponent : MonoBehaviour
         }
     }
 
-    public void PlayAnimation(string name, bool autoEnd = false, Action callBack = null)
+    public void PlayAnimation(string name, float speed = 1f, bool autoEnd = false, Action callBack = null)
     {
         //同じnameのステートを呼び出しても、AnimationClipの先頭のイベントは呼び出されない
         //先頭以降なら呼び出されそう
         //「アニメーションが始まったフレームで行いたい処理」はイベント以外でやった方がよさそう
         simpleAnimation.Stop();
         simpleAnimation.Play(name);
+        GetNowState().speed = speed;
         stateChanged = true;
 
         if(autoEnd){
