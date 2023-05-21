@@ -145,6 +145,12 @@ public class HitBoxComponent : MonoBehaviour
         SyncKeyFramesWithSimpleAnimator();
     }
 
+    private void Reset()
+    {
+        simpleAnimation = GetComponent<SimpleAnimation>();
+        SyncKeyFramesWithSimpleAnimator();
+    }
+
 
     private void Update()
     {
