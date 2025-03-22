@@ -107,9 +107,6 @@ public enum DirectionType
 
 [Serializable]
 [ExecuteInEditMode]
-[RequireComponent(typeof(SpriteRenderer))]
-[RequireComponent(typeof(Animator))]
-[RequireComponent(typeof(SimpleAnimation))]
 public class HitBoxComponent : MonoBehaviour
 {
     [HideInInspector]
@@ -120,6 +117,7 @@ public class HitBoxComponent : MonoBehaviour
 
     public HitBoxes hitboxes = null;
 
+    [SerializeField]
     public SimpleAnimation simpleAnimation;
 
     [HideInInspector]
@@ -141,7 +139,7 @@ public class HitBoxComponent : MonoBehaviour
 
     private void OnEnable()
     {
-        simpleAnimation = GetComponent<SimpleAnimation>();
+        simpleAnimation ??= GetComponent<SimpleAnimation>();
         SyncKeyFramesWithSimpleAnimator();
     }
 

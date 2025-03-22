@@ -37,6 +37,9 @@ public class HitBoxComponentInspector : Editor
         GUI.skin.label.wordWrap = true;
 
 
+        var simpleAnimationProp = serializedObject.FindProperty("simpleAnimation");
+        EditorGUILayout.PropertyField(simpleAnimationProp, true);
+
         GUILayout.BeginHorizontal();
         GUILayout.Label("New HitBox Name:");
         addScriptableObjectName = GUILayout.TextField(addScriptableObjectName);
@@ -147,8 +150,7 @@ public class HitBoxComponentInspector : Editor
 
             var position = col.colliderParam.Position;
             position.Scale(new Vector3(sign, 1, 1));
-            var movedPosition = Handles.FreeMoveHandle(position + targetComponents.gameObject.transform.position,
-                                                     Quaternion.identity,
+            var fmh_151_54_637828863753673995 = Quaternion.identity; var movedPosition = Handles.FreeMoveHandle(position + targetComponents.gameObject.transform.position,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
@@ -164,8 +166,7 @@ public class HitBoxComponentInspector : Editor
                 Handles.color = new Color(1, 1, 1);
                 var helperpreposition = position + helper;
                 helperpreposition.Scale(new Vector3(sign, 1.0f, 1.0f));
-                var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
-                                                     Quaternion.identity,
+                var fmh_168_54_637828863753705736 = Quaternion.identity; var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
@@ -182,8 +183,7 @@ public class HitBoxComponentInspector : Editor
                 Handles.color = new Color(1, 1, 1);
                 var helperpreposition = position + helper;
                 helperpreposition.Scale(new Vector3(sign, 1.0f, 1.0f));
-                var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
-                                                     Quaternion.identity,
+                var fmh_186_54_637828863753712709 = Quaternion.identity; var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
