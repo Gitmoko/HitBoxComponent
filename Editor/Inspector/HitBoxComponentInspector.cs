@@ -118,7 +118,7 @@ public class HitBoxComponentInspector : Editor
         if (traceAnimMode == TraceAnimMode.Scene)
         {
             animationindex = targetComponents.GetStateNames().FindIndex(e => e == targetComponents.GetNowStateName());
-            keyframeIndex = targetComponents.GetNowKeyFrame();
+            keyframeIndex = targetComponents.GetModuloFrameTime();
         }
         else
         {
@@ -143,14 +143,13 @@ public class HitBoxComponentInspector : Editor
 
 #if UNITY_EDITOR
             var precolor = Handles.color;
-            var so = new SerializedObject(col.colliderParam);
             Handles.color = new Color(0, 0, 0);
 
             var sign = targetComponents.GetDirectionSign();
 
             var position = col.colliderParam.Position;
             position.Scale(new Vector3(sign, 1, 1));
-            var fmh_151_54_637828863753673995 = Quaternion.identity; var movedPosition = Handles.FreeMoveHandle(position + targetComponents.gameObject.transform.position,
+            var movedPosition = Handles.FreeMoveHandle(position + targetComponents.gameObject.transform.position,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
@@ -159,6 +158,7 @@ public class HitBoxComponentInspector : Editor
             newposition.Scale(new Vector3(sign, 1.0f, 1.0f));
             col.colliderParam.Position = newposition;
 
+            var modified = false;
             if (col.colliderParam is RectColliderParam)
             {
                 var rect = col.colliderParam as RectColliderParam;
@@ -166,14 +166,18 @@ public class HitBoxComponentInspector : Editor
                 Handles.color = new Color(1, 1, 1);
                 var helperpreposition = position + helper;
                 helperpreposition.Scale(new Vector3(sign, 1.0f, 1.0f));
-                var fmh_168_54_637828863753705736 = Quaternion.identity; var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
+                var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
 
-                var newsize = movedhelper - (position + targetComponents.gameObject.transform.position);
-                newsize.Scale(new Vector3(sign, 1.0f, 1.0f));
-                rect.rect.size = newsize;
+                if (!Mathf.Approximately((helperpreposition - movedhelper).magnitude, 0))
+                {
+                    var newsize = movedhelper - (position + targetComponents.gameObject.transform.position);
+                    newsize.Scale(new Vector3(sign, 1.0f, 1.0f));
+                    rect.rect.size = newsize;
+                    modified = true;
+                }
 
             }
             else if (col.colliderParam is SphereColliderParam)
@@ -183,19 +187,24 @@ public class HitBoxComponentInspector : Editor
                 Handles.color = new Color(1, 1, 1);
                 var helperpreposition = position + helper;
                 helperpreposition.Scale(new Vector3(sign, 1.0f, 1.0f));
-                var fmh_186_54_637828863753712709 = Quaternion.identity; var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
+                var movedhelper = Handles.FreeMoveHandle(helper + position + targetComponents.gameObject.transform.position,
                                                      0.05f,
                                                      Vector3.one,
                                                      Handles.DotHandleCap);
 
-                sphere.radius = Mathf.Abs((movedhelper - (position + targetComponents.gameObject.transform.position)).x);
-
+                if (!Mathf.Approximately((helperpreposition - movedhelper).magnitude, 0))
+                {
+                    sphere.radius = Mathf.Abs((movedhelper - (position + targetComponents.gameObject.transform.position)).x);
+                    modified = true;
+                }
+            }
+            if (modified)
+            {
+                EditorUtility.SetDirty(targetComponents.hitboxes);
+                Repaint();
             }
 
-            EditorUtility.SetDirty(targetComponents.hitboxes);
             Handles.color = precolor;
-
-            Repaint();
 #endif
         }
 
@@ -241,7 +250,7 @@ public class HitBoxComponentInspector : Editor
             {
                 return;
             }
-            var currentFrame = targetComponents.GetNowKeyFrame();
+            var currentFrame = targetComponents.GetModuloFrameTime();
             targetComponents.inspectorTemp.keyframeIndex = currentFrame;
             var nowstate = targetComponents.GetNowState();
             EditorGUILayout.LabelField("NowStateName", nowstate.name);
@@ -265,7 +274,7 @@ public class HitBoxComponentInspector : Editor
             if (GUILayout.Button("Show Now KeyFrame Data"))
             {
                 var nowanim = targetComponents.GetNowStateName();
-                var keyframe = targetComponents.GetNowKeyFrame();
+                var keyframe = targetComponents.GetModuloFrameTime();
                 targetComponents.inspectorTemp.animationindex = targetComponents.GetStateNames().FindIndex(0, e => e == nowanim);
                 targetComponents.inspectorTemp.keyframeIndex = keyframe;
 

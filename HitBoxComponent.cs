@@ -126,7 +126,7 @@ public class HitBoxComponent : MonoBehaviour
 
     private List<KVPair<GameObject, ColliderInfo>> nowColliders = new List<KVPair<GameObject, ColliderInfo>>();
 
-    private int preveousKeyFrameIndex = -1;
+    private float? previousNormalizedTime;
 
     private SimpleAnimation.State prestate = null;
 
@@ -136,6 +136,7 @@ public class HitBoxComponent : MonoBehaviour
 
     private Action autoEndCallback;
 
+    private SimpleAnimation.State currentState;
 
     private void OnEnable()
     {
@@ -159,28 +160,26 @@ public class HitBoxComponent : MonoBehaviour
 
         if (hitboxes != null)
         {
-            ;
 
-            var nowstates = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
-            if (nowstates == null)
+            currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
+            if (currentState == null)
             {
                 return;
             }
 
-            if(autoEnd && GetElapsedNormalizedTime() >= 1){
+            if (autoEnd && GetNormalizedTime() >= 1)
+            {
                 autoEndCallback?.Invoke();
                 simpleAnimation.Play("Default");
+                currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
                 autoEnd = false;
                 autoEndCallback = null;
-                preveousKeyFrameIndex = -1;
+                previousNormalizedTime = null;
             }
-        
-     
-            var newKeyframesIndex = !hitboxes[nowstates.name].isLoopFrame ? GetNowKeyFrame() : GetElapsedFrame();
 
             if (prestate == null || stateChanged)
             {
-                prestate = nowstates;
+                prestate = currentState;
                 foreach (var e in nowColliders)
                 {
                     if (e.Key != null)
@@ -189,81 +188,107 @@ public class HitBoxComponent : MonoBehaviour
                     }
                 }
                 nowColliders.Clear();
-                preveousKeyFrameIndex = -1;
+                previousNormalizedTime = null;
                 stateChanged = false;
             }
 
-            if (preveousKeyFrameIndex != newKeyframesIndex)
+            
+            var destroylist = new List<GameObject>();
+            ///生存期間のすぎたcolliderのリスト化
+
+            nowColliders.RemoveAll((KVPair<GameObject, ColliderInfo> e) =>
+            {
+                var elapsed = this.currentState.time - e.Value.startTime;
+                if (elapsed >= e.Value.keyframecollider.dulation * currentState.clip.frameRate && e.Key.activeSelf)
+                {
+                    destroylist.Add(e.Key);
+                    return true;
+                }
+                return false;
+            });
+
+
+            /// 生存期間の過ぎたcolliderの削除
+            foreach (var e in destroylist)
+            {
+                Destroy(e);
+            }
+
+            //新たに発生したcolliderの追加
+            if (hitboxes.data.Find(e => e.Key == currentState.name) != null)
             {
 
-                var destroylist = new List<GameObject>();
-                ///生存期間のすぎたcolliderのリスト化
-
-
-                nowColliders.RemoveAll((KVPair<GameObject, ColliderInfo> e) =>
+                List<int> processFrames = new();
+                if (previousNormalizedTime == null)
                 {
-                    var elapsed = newKeyframesIndex - e.Value.startFrame;
-                    if (elapsed >= e.Value.keyframecollider.dulation && e.Key.activeSelf)
-                    {
-
-                        destroylist.Add(e.Key);
-
-                        return true;
-                    }
-                    return false;
-                });
-
-
-                /// 生存期間の過ぎたcolliderの削除
-                foreach (var e in destroylist)
-                {
-                    Destroy(e);
+                    //表示しているフレームだけ処理
+                    processFrames = new List<int>(Mathf.FloorToInt(this.currentState.time * this.currentState.clip.frameRate));
                 }
-
-                //新たに発生したcolliderの追加
-                if (hitboxes.data.Find(e => e.Key == nowstates.name) != null)
+                else
                 {
-                    var keyFrameNum = hitboxes[nowstates.name].keyframes.Count;
-                    var isLoopFrame = hitboxes[nowstates.name].isLoopFrame;
-                    var elapsedKeyframes = Enumerable.Range(preveousKeyFrameIndex + 1,newKeyframesIndex - preveousKeyFrameIndex);
-
-                    foreach (var i in elapsedKeyframes)
+                    //previousTimeのフレーム+1　~ 今表示しているフレーム (ループを加味する) 
+                    var loopTime = Mathf.FloorToInt(this.currentState.normalizedTime - previousNormalizedTime.Value);
+                    if (loopTime == 0)
                     {
-                        var clampedFrame = !isLoopFrame ? i :( i % keyFrameNum);
-                        foreach (var e in hitboxes[nowstates.name].keyframes[clampedFrame].colliders)
+                        var currentFrame = Mathf.FloorToInt(currentState.normalizedTime % 1.0f * this.currentState.clip.length * this.currentState.clip.frameRate);
+                        var previousFrame = Mathf.FloorToInt(previousNormalizedTime.Value % 1.0f * this.currentState.clip.length  * this.currentState.clip.frameRate);
+                        if (Mathf.FloorToInt(previousNormalizedTime.Value) != Mathf.FloorToInt(this.currentState.normalizedTime))
                         {
-                            Debug.Log("create col");
-                            var col = AddColliderComponentFromParam(e, i);
-                            nowColliders.Add(new KVPair<GameObject, ColliderInfo>(col.gameObject, col));
+                            processFrames = Enumerable.Range(previousFrame + 1, Mathf.Max(0, hitboxes[currentState.name].keyframes.Count - previousFrame))
+                            .Concat(Enumerable.Range(0, currentFrame + 1))
+                            .ToList();
+                        }
+                        else
+                        {
+                            processFrames = Enumerable.Range(previousFrame + 1, currentFrame - previousFrame).ToList();
                         }
                     }
+                    else
+                    {
+                        //一周以上する場合は後回し
+                        Debug.LogError("アニメーションが1fで一周以上した");
+                    }
                 }
-                /*
-                if (KeyframesIndex == 0)
+                foreach (var i in processFrames)
                 {
-                    nowkeyframedata.colliders.Add(new KeyFrameCollider());
-                    var obj = new GameObject("test");
-                    var objtrans = obj.GetComponent<Transform>();
-                    var rigidbody = obj.AddComponent<Rigidbody>();
-                    rigidbody.useGravity = false;
-                    var col = obj.AddComponent<CapsuleCollider>();
-                    nowkeyframedata.colliders[0].collider = col;
-                    col.center = new Vector3(3, 0);
-                    col.radius = 1;
-                    col.height = 2;
-                    col.tag = "test";
-                    col.isTrigger = true;
-
-                    objtrans.SetParent(gameObject.transform, false);
-
+                    if (hitboxes[currentState.name].keyframes.Count - 1 < i)
+                    {
+                        continue;
+                    }
+                    foreach (var e in hitboxes[currentState.name].keyframes[i].colliders)
+                    {
+                        Debug.Log("create col");
+                        var col = AddColliderComponentFromParam(e, Time.time);
+                        nowColliders.Add(new KVPair<GameObject, ColliderInfo>(col.gameObject, col));
+                    }
                 }
-                */
             }
-            preveousKeyFrameIndex = newKeyframesIndex;
+            /*
+            if (KeyframesIndex == 0)
+            {
+                nowkeyframedata.colliders.Add(new KeyFrameCollider());
+                var obj = new GameObject("test");
+                var objtrans = obj.GetComponent<Transform>();
+                var rigidbody = obj.AddComponent<Rigidbody>();
+                rigidbody.useGravity = false;
+                var col = obj.AddComponent<CapsuleCollider>();
+                nowkeyframedata.colliders[0].collider = col;
+                col.center = new Vector3(3, 0);
+                col.radius = 1;
+                col.height = 2;
+                col.tag = "test";
+                col.isTrigger = true;
+
+                objtrans.SetParent(gameObject.transform, false);
+
+            }
+            */
+
+            previousNormalizedTime = this.currentState.normalizedTime;
         }
     }
 
-    public ColliderInfo AddColliderComponentFromParam(KeyFrameCollider keyframe, int startFrame)
+    public ColliderInfo AddColliderComponentFromParam(KeyFrameCollider keyframe, float startTime)
     {
 
 
@@ -272,7 +297,7 @@ public class HitBoxComponent : MonoBehaviour
         var colliderinfo = ret.AddComponent<ColliderInfo>();
         colliderinfo.keyframecollider = keyframe;
         colliderinfo.hitboxParent = gameObject;
-        colliderinfo.startFrame = startFrame;
+        colliderinfo.startTime = startTime;
 
         var param = keyframe.colliderParam;
 
@@ -425,46 +450,31 @@ public class HitBoxComponent : MonoBehaviour
     //実行中の現在ステートの取得
     public SimpleAnimation.State GetNowState()
     {
-        var nowstates = simpleAnimation.GetStates().First(s => s.enabled);
-        return nowstates;
+        return currentState;
     }
 
 
     //実行中の現在ステートの取得
     public string GetNowStateName()
     {
-        var nowstates = simpleAnimation.GetStates().First(s => s.enabled);
-        return nowstates.name;
+        return currentState.name;
     }
 
-    //実行中の現在ステートの取得
-    public int GetNowKeyFrame()
+    public int GetElapsedFrameTime()
     {
-        var nowstate = simpleAnimation.GetStates().First(s => s.enabled);
-        var normalizedTime = nowstate.normalizedTime;
-        float elapsedTime = normalizedTime - (float)Math.Truncate(normalizedTime);
-        int ret = 0;
-        if (normalizedTime >= 1 && !(nowstate.wrapMode == WrapMode.Loop))
-        {
-            ret = Convert.ToInt32(nowstate.clip.length * nowstate.clip.frameRate) - 1;
-        }
-        else
-        {
-            ret = Convert.ToInt32(Math.Floor(nowstate.clip.frameRate * nowstate.clip.length * elapsedTime));
-        }
+        var ret = Convert.ToInt32(Math.Floor(currentState.clip.frameRate * currentState.time));
         return ret;
     }
 
-    public int GetElapsedFrame()
+    public int GetModuloFrameTime()
     {
-        var nowstate = simpleAnimation.GetStates().First(s => s.enabled);
-        var normalizedTime = nowstate.normalizedTime;
-        int ret = Convert.ToInt32(Math.Floor(nowstate.clip.frameRate * nowstate.clip.length * normalizedTime));
-        
+        var moduloTime = currentState.normalizedTime % 1.0f;
+        var ret = Convert.ToInt32(Math.Floor(currentState.clip.frameRate * currentState.clip.length * moduloTime));
         return ret;
     }
 
-        public float GetElapsedNormalizedTime()
+
+    public float GetNormalizedTime()
     {
         var nowstate = simpleAnimation.GetStates().First(s => s.enabled);
         var normalizedTime = nowstate.normalizedTime;
@@ -497,9 +507,9 @@ public class HitBoxComponent : MonoBehaviour
         //「アニメーションが始まったフレームで行いたい処理」はイベント以外でやった方がよさそう
         simpleAnimation.Stop();
         simpleAnimation.Play(name);
-        GetNowState().speed = speed;
+        currentState = GetNowState();
+        currentState.speed = speed;
         stateChanged = true;
-
         if(autoEnd){
             this.autoEnd = autoEnd;
             autoEndCallback = callBack;

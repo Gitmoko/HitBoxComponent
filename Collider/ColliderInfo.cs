@@ -6,5 +6,5 @@ public class ColliderInfo : MonoBehaviour
 
     public GameObject hitboxParent;
 
-    public int startFrame;
+    public float startTime;
 }
