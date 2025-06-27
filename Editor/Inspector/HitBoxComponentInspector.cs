@@ -268,6 +268,9 @@ public class HitBoxComponentInspector : Editor
         EditorGUILayout.LabelField("Flip", targetComponents.direction.ToString());
         targetComponents.hitboxes[animname].isLoopFrame = EditorGUILayout.Toggle("Is Loop FrameData", targetComponents.hitboxes[animname].isLoopFrame);
 
+        targetComponents.enableFlipByDirection = EditorGUILayout.Toggle("enable flip by direction", targetComponents.enableFlipByDirection);
+        
+
         if (Application.isPlaying && traceAnimMode == TraceAnimMode.Off)
         {
 

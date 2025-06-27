@@ -120,7 +120,6 @@ public class HitBoxComponent : MonoBehaviour
     [SerializeField]
     public SimpleAnimation simpleAnimation;
 
-    [HideInInspector]
     public DirectionType direction = DirectionType.Forward;
 
 
@@ -131,6 +130,8 @@ public class HitBoxComponent : MonoBehaviour
     private SimpleAnimation.State prestate = null;
 
     public bool stateChanged = false;
+
+    public bool enableFlipByDirection = true;
 
     private bool autoEnd;
 
@@ -301,7 +302,7 @@ public class HitBoxComponent : MonoBehaviour
 
         var param = keyframe.colliderParam;
 
-        float sign = (direction == DirectionType.Forward) ? 1 : -1;
+        float sign = enableFlipByDirection ? ((direction == DirectionType.Forward) ? 1 : -1 ) : 1f;
 
 
         if (param is RectColliderParam)
