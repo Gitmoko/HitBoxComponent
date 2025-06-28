@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -199,8 +199,8 @@ public class HitBoxComponent : MonoBehaviour
 
             nowColliders.RemoveAll((KVPair<GameObject, ColliderInfo> e) =>
             {
-                var elapsed = this.currentState.time - e.Value.startTime;
-                if (elapsed >= e.Value.keyframecollider.dulation * currentState.clip.frameRate && e.Key.activeSelf)
+                var elapsed = Time.time - e.Value.startTime;
+                if (e.Value.keyframecollider.dulation / currentState.clip.frameRate <= elapsed || !e.Key.activeSelf)
                 {
                     destroylist.Add(e.Key);
                     return true;
