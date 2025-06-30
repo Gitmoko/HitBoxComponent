@@ -151,6 +151,14 @@ public class HitBoxComponent : MonoBehaviour
         SyncKeyFramesWithSimpleAnimator();
     }
 
+    public void Start()
+    {
+        // 再生停止したときにエラーが出るので初期化は再生時のみ
+        if (Application.isPlaying)
+        {
+            currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
+        }
+    }
 
     private void Update()
     {
@@ -161,8 +169,6 @@ public class HitBoxComponent : MonoBehaviour
 
         if (hitboxes != null)
         {
-
-            currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
             if (currentState == null)
             {
                 return;
@@ -193,7 +199,7 @@ public class HitBoxComponent : MonoBehaviour
                 stateChanged = false;
             }
 
-            
+
             var destroylist = new List<GameObject>();
             ///生存期間のすぎたcolliderのリスト化
 
@@ -232,7 +238,7 @@ public class HitBoxComponent : MonoBehaviour
                     if (loopTime == 0)
                     {
                         var currentFrame = Mathf.FloorToInt(currentState.normalizedTime % 1.0f * this.currentState.clip.length * this.currentState.clip.frameRate);
-                        var previousFrame = Mathf.FloorToInt(previousNormalizedTime.Value % 1.0f * this.currentState.clip.length  * this.currentState.clip.frameRate);
+                        var previousFrame = Mathf.FloorToInt(previousNormalizedTime.Value % 1.0f * this.currentState.clip.length * this.currentState.clip.frameRate);
                         if (Mathf.FloorToInt(previousNormalizedTime.Value) != Mathf.FloorToInt(this.currentState.normalizedTime))
                         {
                             processFrames = Enumerable.Range(previousFrame + 1, Mathf.Max(0, hitboxes[currentState.name].keyframes.Count - previousFrame))
@@ -508,7 +514,7 @@ public class HitBoxComponent : MonoBehaviour
         //「アニメーションが始まったフレームで行いたい処理」はイベント以外でやった方がよさそう
         simpleAnimation.Stop();
         simpleAnimation.Play(name);
-        currentState = GetNowState();
+        currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
         currentState.speed = speed;
         stateChanged = true;
         if(autoEnd){
