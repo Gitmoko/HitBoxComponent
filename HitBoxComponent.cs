@@ -137,27 +137,56 @@ public class HitBoxComponent : MonoBehaviour
 
     private Action autoEndCallback;
 
-    private SimpleAnimation.State currentState;
+    private SimpleAnimation.State _currentState;
+
+    private SimpleAnimation.State CurrentState
+    {
+        get
+        {
+            _currentState ??= simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
+            return _currentState;
+        }
+        set
+        {
+            _currentState = value;
+        }
+    }
 
     private void OnEnable()
     {
         simpleAnimation ??= GetComponent<SimpleAnimation>();
+        if (Application.isPlaying)
+        {
+            simpleAnimation.enabled = true;
+        }
         SyncKeyFramesWithSimpleAnimator();
+    }
+
+    private void OnDisable()
+    {
+        if (Application.isPlaying)
+        {
+            CurrentState = null;
+            simpleAnimation.Play("Default");
+            simpleAnimation.enabled = false;
+            foreach (var e in nowColliders)
+            {
+                if (e.Key != null)
+                {
+                    Destroy(e.Key.gameObject);
+                }
+            }
+            nowColliders.Clear();
+            previousNormalizedTime = null;
+            prestate = null;
+            stateChanged = false;
+        }
     }
 
     private void Reset()
     {
         simpleAnimation = GetComponent<SimpleAnimation>();
         SyncKeyFramesWithSimpleAnimator();
-    }
-
-    public void Start()
-    {
-        // 再生停止したときにエラーが出るので初期化は再生時のみ
-        if (Application.isPlaying)
-        {
-            currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
-        }
     }
 
     private void Update()
@@ -169,7 +198,7 @@ public class HitBoxComponent : MonoBehaviour
 
         if (hitboxes != null)
         {
-            if (currentState == null)
+            if (CurrentState == null)
             {
                 return;
             }
@@ -178,7 +207,7 @@ public class HitBoxComponent : MonoBehaviour
             {
                 autoEndCallback?.Invoke();
                 simpleAnimation.Play("Default");
-                currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
+                CurrentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
                 autoEnd = false;
                 autoEndCallback = null;
                 previousNormalizedTime = null;
@@ -186,7 +215,7 @@ public class HitBoxComponent : MonoBehaviour
 
             if (prestate == null || stateChanged)
             {
-                prestate = currentState;
+                prestate = CurrentState;
                 foreach (var e in nowColliders)
                 {
                     if (e.Key != null)
@@ -206,7 +235,7 @@ public class HitBoxComponent : MonoBehaviour
             nowColliders.RemoveAll((KVPair<GameObject, ColliderInfo> e) =>
             {
                 var elapsed = Time.time - e.Value.startTime;
-                if (e.Value.keyframecollider.dulation / currentState.clip.frameRate <= elapsed || !e.Key.activeSelf)
+                if (e.Value.keyframecollider.dulation / CurrentState.clip.frameRate <= elapsed || !e.Key.activeSelf)
                 {
                     destroylist.Add(e.Key);
                     return true;
@@ -222,26 +251,26 @@ public class HitBoxComponent : MonoBehaviour
             }
 
             //新たに発生したcolliderの追加
-            if (hitboxes.data.Find(e => e.Key == currentState.name) != null)
+            if (hitboxes.data.Find(e => e.Key == CurrentState.name) != null)
             {
 
                 List<int> processFrames = new();
                 if (previousNormalizedTime == null)
                 {
                     //表示しているフレームだけ処理
-                    processFrames = new List<int>(Mathf.FloorToInt(this.currentState.time * this.currentState.clip.frameRate));
+                    processFrames = new List<int>(Mathf.FloorToInt(this.CurrentState.time * this.CurrentState.clip.frameRate));
                 }
                 else
                 {
                     //previousTimeのフレーム+1　~ 今表示しているフレーム (ループを加味する) 
-                    var loopTime = Mathf.FloorToInt(this.currentState.normalizedTime - previousNormalizedTime.Value);
+                    var loopTime = Mathf.FloorToInt(this.CurrentState.normalizedTime - previousNormalizedTime.Value);
                     if (loopTime == 0)
                     {
-                        var currentFrame = Mathf.FloorToInt(currentState.normalizedTime % 1.0f * this.currentState.clip.length * this.currentState.clip.frameRate);
-                        var previousFrame = Mathf.FloorToInt(previousNormalizedTime.Value % 1.0f * this.currentState.clip.length * this.currentState.clip.frameRate);
-                        if (Mathf.FloorToInt(previousNormalizedTime.Value) != Mathf.FloorToInt(this.currentState.normalizedTime))
+                        var currentFrame = Mathf.FloorToInt(CurrentState.normalizedTime % 1.0f * this.CurrentState.clip.length * this.CurrentState.clip.frameRate);
+                        var previousFrame = Mathf.FloorToInt(previousNormalizedTime.Value % 1.0f * this.CurrentState.clip.length * this.CurrentState.clip.frameRate);
+                        if (Mathf.FloorToInt(previousNormalizedTime.Value) != Mathf.FloorToInt(this.CurrentState.normalizedTime))
                         {
-                            processFrames = Enumerable.Range(previousFrame + 1, Mathf.Max(0, hitboxes[currentState.name].keyframes.Count - previousFrame))
+                            processFrames = Enumerable.Range(previousFrame + 1, Mathf.Max(0, hitboxes[CurrentState.name].keyframes.Count - previousFrame))
                             .Concat(Enumerable.Range(0, currentFrame + 1))
                             .ToList();
                         }
@@ -258,11 +287,11 @@ public class HitBoxComponent : MonoBehaviour
                 }
                 foreach (var i in processFrames)
                 {
-                    if (hitboxes[currentState.name].keyframes.Count - 1 < i)
+                    if (hitboxes[CurrentState.name].keyframes.Count - 1 < i)
                     {
                         continue;
                     }
-                    foreach (var e in hitboxes[currentState.name].keyframes[i].colliders)
+                    foreach (var e in hitboxes[CurrentState.name].keyframes[i].colliders)
                     {
                         Debug.Log("create col");
                         var col = AddColliderComponentFromParam(e, Time.time);
@@ -291,7 +320,7 @@ public class HitBoxComponent : MonoBehaviour
             }
             */
 
-            previousNormalizedTime = this.currentState.normalizedTime;
+            previousNormalizedTime = this.CurrentState.normalizedTime;
         }
     }
 
@@ -457,26 +486,26 @@ public class HitBoxComponent : MonoBehaviour
     //実行中の現在ステートの取得
     public SimpleAnimation.State GetNowState()
     {
-        return currentState;
+        return CurrentState;
     }
 
 
     //実行中の現在ステートの取得
     public string GetNowStateName()
     {
-        return currentState.name;
+        return CurrentState.name;
     }
 
     public int GetElapsedFrameTime()
     {
-        var ret = Convert.ToInt32(Math.Floor(currentState.clip.frameRate * currentState.time));
+        var ret = Convert.ToInt32(Math.Floor(CurrentState.clip.frameRate * CurrentState.time));
         return ret;
     }
 
     public int GetModuloFrameTime()
     {
-        var moduloTime = currentState.normalizedTime % 1.0f;
-        var ret = Convert.ToInt32(Math.Floor(currentState.clip.frameRate * currentState.clip.length * moduloTime));
+        var moduloTime = CurrentState.normalizedTime % 1.0f;
+        var ret = Convert.ToInt32(Math.Floor(CurrentState.clip.frameRate * CurrentState.clip.length * moduloTime));
         return ret;
     }
 
@@ -514,8 +543,8 @@ public class HitBoxComponent : MonoBehaviour
         //「アニメーションが始まったフレームで行いたい処理」はイベント以外でやった方がよさそう
         simpleAnimation.Stop();
         simpleAnimation.Play(name);
-        currentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
-        currentState.speed = speed;
+        CurrentState = simpleAnimation.GetStates().FirstOrDefault(s => s.enabled);
+        CurrentState.speed = speed;
         stateChanged = true;
         if(autoEnd){
             this.autoEnd = autoEnd;
