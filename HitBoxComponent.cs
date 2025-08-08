@@ -551,15 +551,21 @@ public class HitBoxComponent : MonoBehaviour
             autoEndCallback = callBack;
         }
     }
+    
+    public void PlayAnimation(string name)
+    {
+        PlayAnimation(name, 1f, false, null);
+    }
 
-    private SimpleAnimation.EditorState[] GetEditorStates(){
-            Type type = simpleAnimation.GetType();
+    private SimpleAnimation.EditorState[] GetEditorStates()
+    {
+        Type type = simpleAnimation.GetType();
 
-            //// 以下privateフィールドの値を無理やり取得する
-            // Typeからフィールドを探す。フィールド名とBindingFlagsを引数にする。
-            FieldInfo field = type.GetField("m_States", BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance);
-            SimpleAnimation.EditorState[] states = (SimpleAnimation.EditorState[])(field.GetValue(simpleAnimation));
+        //// 以下privateフィールドの値を無理やり取得する
+        // Typeからフィールドを探す。フィールド名とBindingFlagsを引数にする。
+        FieldInfo field = type.GetField("m_States", BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance);
+        SimpleAnimation.EditorState[] states = (SimpleAnimation.EditorState[])(field.GetValue(simpleAnimation));
 
-            return states;
+        return states;
     }
 }
