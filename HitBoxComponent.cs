@@ -167,7 +167,10 @@ public class HitBoxComponent : MonoBehaviour
         if (Application.isPlaying)
         {
             CurrentState = null;
-            simpleAnimation.Play("Default");
+            if (simpleAnimation.GetState("Default").clip != null)
+            {
+                simpleAnimation.Play("Default");
+            }
             simpleAnimation.enabled = false;
             foreach (var e in nowColliders)
             {
