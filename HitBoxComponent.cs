@@ -261,7 +261,7 @@ public class HitBoxComponent : MonoBehaviour
                 if (previousNormalizedTime == null)
                 {
                     //表示しているフレームだけ処理
-                    processFrames = new List<int>(Mathf.FloorToInt(this.CurrentState.time * this.CurrentState.clip.frameRate));
+                    processFrames = new List<int> { Mathf.FloorToInt(this.CurrentState.time * this.CurrentState.clip.frameRate) };
                 }
                 else
                 {
