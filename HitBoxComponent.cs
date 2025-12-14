@@ -159,7 +159,10 @@ public class HitBoxComponent : MonoBehaviour
         {
             simpleAnimation.enabled = true;
         }
-        SyncKeyFramesWithSimpleAnimator();
+        else
+        {
+            SyncKeyFramesWithSimpleAnimator();
+        }
     }
 
     private void OnDisable()
@@ -167,7 +170,7 @@ public class HitBoxComponent : MonoBehaviour
         if (Application.isPlaying)
         {
             CurrentState = null;
-            if (simpleAnimation.GetState("Default").clip != null)
+            if (simpleAnimation.GetState("Default")?.clip != null)
             {
                 simpleAnimation.Play("Default");
             }
@@ -363,7 +366,7 @@ public class HitBoxComponent : MonoBehaviour
             {
                 var col = ret.AddComponent<BoxCollider>();
                 col.center = new Vector3(rect.rect.center.x * sign, rect.rect.center.y, 0.0f);
-                col.size = new Vector3(rect.rect.size.x, rect.rect.size.y, 0.2f);
+                col.size = new Vector3(rect.rect.size.x, rect.rect.size.y, 0.6f);
                 col.tag = keyframe.tag;
                 col.gameObject.layer = LayerMask.NameToLayer(keyframe.layer);
                 col.isTrigger = true;
